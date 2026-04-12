@@ -1,6 +1,6 @@
 {
   "name": "@templatefox/mcp-server",
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "MCP server for TemplateFox PDF generation API - Generate PDFs from templates via AI assistants",
   "author": "TemplateFox",
   "license": "MIT",
