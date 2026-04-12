@@ -18,7 +18,7 @@ export function registerTools(server: McpServer): void {
       s3_filepath: z.string().optional().describe("Custom path prefix in your S3 bucket. Uses default prefix if not provided."),
       s3_bucket: z.string().optional().describe("Override the default bucket configured in your S3 integration."),
       pdf_variant: z.enum(["pdf/a-1b", "pdf/a-2b", "pdf/a-3b"]).optional().describe("Generate a standards-compliant PDF variant. Use `pdf/a-3b` for archival compliance (most common). Use `pdf/a-3b` if you need file attachments (e.g. Factur-X). When not set, a standard PDF is generated."),
-      version: z.string().optional().describe("Optional version tag (e.g. `prod`) or version number (e.g. `3`). When omitted, uses the template's default version if set, otherwise the current draft."),
+      version: z.string().optional().describe("Optional version tag (e.g. `prod`) or version number (e.g. `3`). When omitted, uses the current draft."),
     },
     { destructiveHint: false },
     async ({ template_id, data, export_type, expiration, filename, store_s3, s3_filepath, s3_bucket, pdf_variant, version }) => {
