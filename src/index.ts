@@ -5,7 +5,7 @@ import { registerTools } from "./tools.js";
 
 const server = new McpServer({
   name: "templatefox",
-  version: "1.9.3",
+  version: "1.9.4",
 });
 
 registerTools(server);
