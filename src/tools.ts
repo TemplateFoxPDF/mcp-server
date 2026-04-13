@@ -17,7 +17,7 @@ export function registerTools(server: McpServer): void {
       store_s3: z.boolean().optional().describe("Upload to your configured S3 bucket instead of CDN"),
       s3_filepath: z.string().optional().describe("Custom path prefix in your S3 bucket. Uses default prefix if not provided."),
       s3_bucket: z.string().optional().describe("Override the default bucket configured in your S3 integration."),
-      pdf_variant: z.enum(["pdf/a-1b", "pdf/a-2b", "pdf/a-3b"]).optional().describe("Generate a standards-compliant PDF variant. Use `pdf/a-3b` for archival compliance (most common). Use `pdf/a-3b` if you need file attachments (e.g. Factur-X). When not set, a standard PDF is generated."),
+      pdf_variant: z.enum(["pdf/a-1b", "pdf/a-2b", "pdf/a-3b"]).optional().describe("Generate a standards-compliant PDF variant. Use `pdf/a-2b` for archival compliance (most common). Use `pdf/a-3b` if you need file attachments (e.g. Factur-X, ZUGFeRD). When not set, a standard PDF is generated."),
       version: z.string().optional().describe("Optional version tag (e.g. `prod`) or version number (e.g. `3`). When omitted, uses the current draft."),
     },
     { destructiveHint: false },
