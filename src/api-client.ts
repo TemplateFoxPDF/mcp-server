@@ -1,10 +1,28 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 const BASE_URL = process.env.TEMPLATEFOX_BASE_URL || "https://api.templatefox.com";
 
+const apiKeyStore = new AsyncLocalStorage<string>();
+
+/**
+ * Run a function with a specific API key in context.
+ * Used by HTTP transport to pass per-request API keys.
+ */
+export function runWithApiKey<T>(apiKey: string, fn: () => T): T {
+  return apiKeyStore.run(apiKey, fn);
+}
+
 function getApiKey(): string {
+  // 1. Per-request key from HTTP transport (AsyncLocalStorage)
+  const contextKey = apiKeyStore.getStore();
+  if (contextKey) return contextKey;
+
+  // 2. Environment variable (stdio mode)
   const key = process.env.TEMPLATEFOX_API_KEY;
   if (!key) {
     throw new Error(
-      "TEMPLATEFOX_API_KEY environment variable is required. " +
+      "TEMPLATEFOX_API_KEY is required. " +
+      "Set it as an environment variable or pass it via the Authorization header. " +
       "Get your API key at https://app.templatefox.com/dashboard/api-keys"
     );
   }

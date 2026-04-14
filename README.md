@@ -62,6 +62,45 @@ Then use `templatefox-mcp-server` as the command instead of `npx`.
 | `get_account_info` | Check remaining credits and account info |
 | `list_transactions` | View credit transaction history |
 
+## Remote Server (HTTP)
+
+The MCP server also supports HTTP transport via Streamable HTTP, suitable for remote and cloud deployments.
+
+### Connect via URL
+
+```
+https://mcp-server-599407781746.us-central1.run.app/mcp
+```
+
+MCP clients must pass the API key via HTTP header:
+
+```
+Authorization: Bearer sk_your_api_key_here
+```
+
+or:
+
+```
+x-api-key: sk_your_api_key_here
+```
+
+### Self-host
+
+Run the server in HTTP mode by setting the `PORT` environment variable:
+
+```bash
+PORT=8080 TEMPLATEFOX_API_KEY=sk_your_key node dist/index.js
+```
+
+Or with Docker:
+
+```bash
+docker build -t templatefox-mcp .
+docker run -p 8080:8080 templatefox-mcp
+```
+
+The MCP endpoint is available at `http://localhost:8080/mcp` and a health check at `http://localhost:8080/health`.
+
 ## Example Usage
 
 Once configured, you can ask your AI assistant:
