@@ -103,11 +103,12 @@ export function registerTools(server: McpServer): void {
     "list_templates",
     "List all available PDF templates. Returns template IDs and names. Use this to discover which templates are available before generating a PDF.",
     {
+      kind: z.string().optional().describe("Filter by product kind: `pdf` or `image`"),
     },
     { readOnlyHint: true },
-    async () => {
+    async ({ kind }) => {
       const url = "/v1/templates";
-      const result = await apiRequest("GET", url);
+      const result = await apiRequest("GET", url, undefined, { kind });
       return {
         content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
         isError: !result.ok,
