@@ -31,6 +31,36 @@ export function registerTools(server: McpServer): void {
     },
   );
 
+  // createImage -> generate_image
+  server.tool(
+    "generate_image",
+    "Generate an image (PNG/JPEG/WebP) from an image template. Content is driven by modifications targeting named layers (use get_template_layers to discover them). Returns a URL to the rendered image — keep export_type at its default 'url' (binary is not supported over MCP). Costs 1 credit per generation.",
+    {
+      template_id: z.string().describe("Template short ID (12 characters)"),
+      modifications: z.array(z.object({ name: z.string().describe("Name of the layer to modify (set via the editor's Layers panel). Matched against the element's `data-layer-name`, falling back to its `id`."), text: z.string().optional().describe("Replace the element's text content. Rendered as literal text (HTML and `{{ }}` are not interpreted)."), image_url: z.string().optional().describe("Set the image source. For an `<img>` element this sets `src`; for any other element it sets a `background-image`."), color: z.string().optional().describe("CSS color applied to the element's text (`color`)."), background: z.string().optional().describe("CSS color applied to the element's background (`background-color`)."), hidden: z.boolean().optional().describe("Hide (`true`) or show (`false`) the element.") })).optional().describe("Modify template elements by their layer name (set in the editor's Layers panel). Each item targets a layer and can set its text, image, colors, or visibility. Unknown layer names are skipped and reported in the response `warnings`."),
+      data: z.record(z.string(), z.unknown()).optional().describe("Optional key-value data merged into `{{ }}` template variables. For most image templates, prefer `modifications` instead."),
+      format: z.enum(["png", "jpeg", "webp"]).optional().describe("Output image format: `png` (default), `jpeg` or `webp`."),
+      width: z.number().int().min(100).max(4000).optional().describe("Output width in pixels (height follows the template aspect ratio). Defaults to the template's native pixel width."),
+      quality: z.number().int().min(1).max(100).optional().describe("Compression quality for `jpeg`/`webp` (1-100). Ignored for `png`."),
+      export_type: z.enum(["url", "binary"]).optional().describe("Export format: `url` uploads to CDN and returns URL, `binary` returns raw image bytes"),
+      expiration: z.number().int().min(60).max(604800).optional().describe("URL expiration in seconds. Min: 60 (1 min), Max: 604800 (7 days). Only applies to `url` export type."),
+      filename: z.string().optional().describe("Custom filename (without extension). If not provided, defaults to 'document'. Only applies to `url` export type."),
+      store_s3: z.boolean().optional().describe("Upload to your configured S3 bucket instead of CDN"),
+      s3_filepath: z.string().optional().describe("Custom path prefix in your S3 bucket. Uses default prefix if not provided."),
+      s3_bucket: z.string().optional().describe("Override the default bucket configured in your S3 integration."),
+      version: z.string().optional().describe("Optional version tag (e.g. `prod`) or version number (e.g. `3`). When omitted, uses the current draft."),
+    },
+    { destructiveHint: false },
+    async ({ template_id, modifications, data, format, width, quality, export_type, expiration, filename, store_s3, s3_filepath, s3_bucket, version }) => {
+      const url = "/v1/image/create";
+      const result = await apiRequest("POST", url, { template_id, modifications, data, format, width, quality, export_type, expiration, filename, store_s3, s3_filepath, s3_bucket, version });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+        isError: !result.ok,
+      };
+    },
+  );
+
   // createPdfAsync -> generate_pdf_async
   server.tool(
     "generate_pdf_async",
@@ -134,6 +164,24 @@ export function registerTools(server: McpServer): void {
     },
   );
 
+  // getTemplateLayers -> get_template_layers
+  server.tool(
+    "get_template_layers",
+    "List the named layers of an image template: name, type (background/image/text/shape), current text, and which fields each layer accepts as modifications in generate_image.",
+    {
+      template_id: z.string().describe("Template short ID (12 characters)"),
+    },
+    { readOnlyHint: true },
+    async ({ template_id }) => {
+      const url = `/v1/templates/${template_id}/layers`;
+      const result = await apiRequest("GET", url);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+        isError: !result.ok,
+      };
+    },
+  );
+
   // getAccount -> get_account_info
   server.tool(
     "get_account_info",
@@ -163,6 +211,67 @@ export function registerTools(server: McpServer): void {
     async ({ limit, offset }) => {
       const url = "/v1/account/transactions";
       const result = await apiRequest("GET", url, undefined, { limit, offset });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+        isError: !result.ok,
+      };
+    },
+  );
+
+  // createAgentTemplate -> author_template
+  server.tool(
+    "author_template",
+    "Have the TemplateFox authoring agent create a new image template from a natural-language description (plus optional brand colors/fonts/asset URLs). Asynchronous: returns a job_id — poll get_agent_job_status until completed, which always returns the template_id and a preview_url of the rendered result. Costs 25 credits, refunded if the job fails.",
+    {
+      instructions: z.string().describe("What the template should look like and which layers it needs, in natural language."),
+      name: z.string().describe("Template name"),
+      preset: z.enum(["instagram-square", "instagram-story", "og-image", "twitter-card", "pinterest-pin", "square-512"]).optional().describe("Canvas preset (or pass width + height)"),
+      width: z.number().int().min(16).max(8000).optional().describe("Canvas width in px"),
+      height: z.number().int().min(16).max(8000).optional().describe("Canvas height in px"),
+      brand: z.object({ colors: z.array(z.string()).optional().describe("Brand colors as hex strings, e.g. ['#0C3C5F', '#E27D28']"), fonts: z.array(z.string()).optional().describe("Preferred font families. Non-built-in fonts are substituted with the closest built-in and noted in the result."), asset_urls: z.array(z.string()).optional().describe("Public https:// URLs of assets (logo, photos) the agent may use.") }).optional().describe("Optional brand constraints passed to the agent."),
+    },
+    { destructiveHint: false },
+    async ({ instructions, name, preset, width, height, brand }) => {
+      const url = "/v1/agent/templates";
+      const result = await apiRequest("POST", url, { instructions, name, preset, width, height, brand });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+        isError: !result.ok,
+      };
+    },
+  );
+
+  // reviseAgentTemplate -> revise_template
+  server.tool(
+    "revise_template",
+    "Send natural-language feedback to the authoring agent to revise an existing image template (layer names stay stable). Asynchronous: returns a job_id — poll get_agent_job_status for the fresh preview_url. Costs 10 credits, refunded if the job fails.",
+    {
+      template_id: z.string().describe("Template short ID (12 characters)"),
+      feedback: z.string().describe("Natural-language feedback on the current template."),
+      brand: z.object({ colors: z.array(z.string()).optional().describe("Brand colors as hex strings, e.g. ['#0C3C5F', '#E27D28']"), fonts: z.array(z.string()).optional().describe("Preferred font families. Non-built-in fonts are substituted with the closest built-in and noted in the result."), asset_urls: z.array(z.string()).optional().describe("Public https:// URLs of assets (logo, photos) the agent may use.") }).optional().describe("Optional brand constraints passed to the agent."),
+    },
+    { destructiveHint: false },
+    async ({ template_id, feedback, brand }) => {
+      const url = `/v1/agent/templates/${template_id}/revise`;
+      const result = await apiRequest("POST", url, { feedback, brand });
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
+        isError: !result.ok,
+      };
+    },
+  );
+
+  // getAgentJob -> get_agent_job_status
+  server.tool(
+    "get_agent_job_status",
+    "Get the status of an authoring-agent job (author_template / revise_template). When completed, returns the template_id and a preview_url of the rendered template. Failed jobs include the error and are automatically refunded.",
+    {
+      job_id: z.string().describe("Job UUID"),
+    },
+    { readOnlyHint: true },
+    async ({ job_id }) => {
+      const url = `/v1/agent/jobs/${job_id}`;
+      const result = await apiRequest("GET", url);
       return {
         content: [{ type: "text", text: JSON.stringify(result.data, null, 2) }],
         isError: !result.ok,
