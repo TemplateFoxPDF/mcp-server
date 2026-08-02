@@ -6,7 +6,7 @@ import { registerTools } from "./tools.js";
 import { runWithApiKey } from "./api-client.js";
 
 const SERVER_NAME = "templatefox";
-const SERVER_VERSION = "1.10.1";
+const SERVER_VERSION = "1.13.0";
 
 function createServer(): McpServer {
   const server = new McpServer({
